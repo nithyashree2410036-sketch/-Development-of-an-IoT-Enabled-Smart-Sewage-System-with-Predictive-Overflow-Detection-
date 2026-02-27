@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#060d1a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="SmartSewer" />
+  <meta name="description" content="IoT Smart Sewage Monitoring & Predictive Overflow Detection" />
+  <link rel="manifest" href="manifest.json" />
+  <title>SmartSewer Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:#060d1a; --bg2:#0a1628; --bg3:#0f1e38; --card:#111e35; --card2:#162540;
+      --accent:#00e5ff; --warn:#ffb300; --danger:#ff3d3d; --safe:#00e676;
+      --text:#e8f4ff; --muted:#5a7a9a; --border:rgba(0,229,255,0.12);
+      --glow:0 0 20px rgba(0,229,255,0.3); --glow-w:0 0 20px rgba(255,179,0,0.4); --glow-d:0 0 25px rgba(255,61,61,0.5);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;padding-bottom:80px}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+
+    header{position:sticky;top:0;z-index:100;background:rgba(6,13,26,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+    .logo{font-family:'Orbitron',monospace;font-weight:900;font-size:17px;color:var(--accent);text-shadow:var(--glow);letter-spacing:1px}
+    .logo span{color:var(--text);font-weight:400}
+    .hdr-r{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+    .ldot{width:8px;height:8px;border-radius:50%;background:var(--safe);box-shadow:0 0 8px var(--safe);animation:pulse 1.5s infinite}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
+    .chip{padding:2px 8px;border-radius:6px;font-size:10px;letter-spacing:.5px;background:rgba(255,179,0,.1);border:1px solid rgba(255,179,0,.2);color:var(--warn)}
+    .chip.live{background:rgba(0,230,118,.1);border-color:rgba(0,230,118,.25);color:var(--safe)}
+
+    .toast-wrap{position:fixed;top:68px;left:12px;right:12px;z-index:999;pointer-events:none}
+    .toast{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:13px 15px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;box-shadow:0 8px 30px rgba(0,0,0,.55);animation:tIn .4s ease;pointer-events:all}
+    .toast.out{animation:tOut .3s ease forwards}
+    @keyframes tIn{from{opacity:0;transform:translateY(-18px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes tOut{to{opacity:0;transform:translateY(-10px) scale(.95)}}
+    .t-icon{font-size:20px}.t-title{font-size:13px;font-weight:600}.t-msg{font-size:12px;color:var(--muted);margin-top:2px}
+
+    .inst-banner{display:none;margin:12px 16px 0;padding:13px 16px;background:rgba(0,229,255,.07);border:1px solid rgba(0,229,255,.18);border-radius:14px;align-items:center;gap:12px;font-size:13px}
+    .inst-banner.show{display:flex}
+    .btn-inst{margin-left:auto;padding:8px 16px;border-radius:10px;border:none;background:var(--accent);color:var(--bg);font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;flex-shrink:0}
+
+    .a-banner{margin:10px 16px 0;padding:11px 16px;border-radius:12px;font-size:13px;font-weight:500;display:none;align-items:center;gap:10px}
+    .a-banner.w{display:flex;background:rgba(255,179,0,.1);border:1px solid rgba(255,179,0,.3);color:var(--warn)}
+    .a-banner.d{display:flex;background:rgba(255,61,61,.1);border:1px solid rgba(255,61,61,.3);color:var(--danger);animation:blink 1s infinite}
+    @keyframes blink{0%,100%{border-color:rgba(255,61,61,.3)}50%{border-color:rgba(255,61,61,.8)}}
+
+    main{padding:16px;position:relative;z-index:1}
+    .page{display:none}.page.active{display:block}
+    h2.sec{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin:20px 0 10px}
+
+    .lv-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:20px;position:relative;overflow:hidden}
+    .lv-card::after{content:'';position:absolute;top:-50px;right:-50px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,.06),transparent 70%);pointer-events:none}
+    .lv-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+    .lv-label{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+    .lv-num{font-family:'Orbitron',monospace;font-size:52px;font-weight:900;line-height:1;color:var(--accent);text-shadow:var(--glow);transition:color .5s,text-shadow .5s}
+    .lv-num.w{color:var(--warn);text-shadow:var(--glow-w)}.lv-num.d{color:var(--danger);text-shadow:var(--glow-d)}
+    .lv-unit{font-size:18px;color:var(--muted)}
+    .lv-badge{padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+    .b-s{background:rgba(0,230,118,.1);color:var(--safe);border:1px solid rgba(0,230,118,.25)}
+    .b-w{background:rgba(255,179,0,.1);color:var(--warn);border:1px solid rgba(255,179,0,.3)}
+    .b-d{background:rgba(255,61,61,.1);color:var(--danger);border:1px solid rgba(255,61,61,.3)}
+    .track{background:rgba(255,255,255,.05);border-radius:10px;height:14px;overflow:hidden;margin-bottom:8px}
+    .fill{height:100%;border-radius:10px;background:linear-gradient(90deg,#00b8d4,#00e5ff);transition:width 1s ease,background .5s;position:relative}
+    .fill::after{content:'';position:absolute;right:0;top:0;bottom:0;width:20px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4));animation:sh 2s infinite}
+    @keyframes sh{0%,100%{opacity:.4}50%{opacity:1}}
+    .fill.fw{background:linear-gradient(90deg,#e65100,#ffb300)}
+    .fill.fd{background:linear-gradient(90deg,#b71c1c,#ff3d3d);animation:fp .8s infinite alternate}
+    @keyframes fp{from{opacity:.85}to{opacity:1}}
+    .marks{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);padding:0 2px}
+
+    .sgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .scard{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;position:relative;overflow:hidden;transition:transform .2s}
+    .scard:active{transform:scale(.97)}
+    .s-icon{font-size:22px;margin-bottom:8px;display:block}
+    .s-name{font-size:11px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+    .s-val{font-family:'Orbitron',monospace;font-size:24px;font-weight:700;color:var(--text)}
+    .s-unit{font-size:11px;color:var(--muted);margin-left:3px}
+    .tr{position:absolute;top:14px;right:14px;font-size:11px;padding:2px 7px;border-radius:8px}
+    .tr-u{background:rgba(255,61,61,.15);color:var(--danger)}
+    .tr-d{background:rgba(0,230,118,.1);color:var(--safe)}
+    .tr-s{background:rgba(0,229,255,.1);color:var(--accent)}
+    .spark{margin-top:10px;height:30px}
+
+    .pred-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;display:flex;align-items:center;gap:16px}
+    .pred-ico{width:52px;height:52px;border-radius:14px;font-size:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+    .pi-s{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.2)}
+    .pi-w{background:rgba(255,179,0,.1);border:1px solid rgba(255,179,0,.2)}
+    .pi-d{background:rgba(255,61,61,.1);border:1px solid rgba(255,61,61,.2)}
+    .pred-title{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;margin-bottom:4px}
+    .pred-sub{font-size:12px;color:var(--muted);line-height:1.5}
+    .pred-time{margin-left:auto;text-align:right;flex-shrink:0}
+    .pt-v{font-family:'Orbitron',monospace;font-size:20px;font-weight:700;color:var(--warn)}
+    .pt-u{font-size:10px;color:var(--muted)}
+
+    .ch-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px}
+    .ch-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .ch-title{font-size:13px;font-weight:500}
+    .ch-tabs{display:flex;gap:4px}
+    .ctab{padding:4px 10px;border-radius:8px;font-size:11px;cursor:pointer;border:none;background:var(--bg3);color:var(--muted);font-family:'DM Sans',sans-serif;transition:all .2s}
+    .ctab.active{background:rgba(0,229,255,.15);color:var(--accent)}
+
+    .hlist{display:flex;flex-direction:column;gap:10px}
+    .hitem{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;animation:fU .4s ease both}
+    @keyframes fU{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    .hdot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .hdot.safe{background:var(--safe);box-shadow:0 0 6px var(--safe)}
+    .hdot.warn{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+    .hdot.danger{background:var(--danger);box-shadow:0 0 6px var(--danger)}
+    .h-i{flex:1}.h-msg{font-size:13px;font-weight:500}.h-t{font-size:11px;color:var(--muted);margin-top:2px}
+    .h-lv{font-family:'Orbitron',monospace;font-size:14px;font-weight:700}
+
+    .cfg-card{background:var(--card);border:1px solid rgba(0,229,255,.1);border-radius:16px;padding:18px;margin-bottom:12px}
+    .cfg-card p{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6}
+    .ig{margin-bottom:12px}
+    .ig label{font-size:11px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:5px}
+    .ig input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s}
+    .ig input:focus{border-color:var(--accent)}
+    .btn-go{width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#00b8d4,#00e5ff);color:#060d1a;font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:opacity .2s,transform .1s}
+    .btn-go:active{opacity:.85;transform:scale(.98)}
+    .cs{margin-top:10px;font-size:12px;text-align:center}.cs.ok{color:var(--safe)}.cs.er{color:var(--danger)}
+
+    .bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,22,40,.95);backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom)}
+    .nb{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 8px;border:none;background:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:.3px;cursor:pointer;transition:color .2s;position:relative}
+    .nb .ni{font-size:20px;margin-bottom:3px}
+    .nb.active{color:var(--accent)}
+    .nb.active::before{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:var(--accent);border-radius:0 0 4px 4px;box-shadow:var(--glow)}
+    .nbadge{position:absolute;top:8px;right:calc(50% - 14px);background:var(--danger);color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;border-radius:50%;display:none;align-items:center;justify-content:center;border:2px solid var(--bg2)}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SMART<span>SEWER</span></div>
+  <div class="hdr-r">
+    <div class="ldot" id="ldot"></div>
+    <span id="connLbl">DEMO</span>
+    <span class="chip" id="modeChip">DEMO</span>
+  </div>
+</header>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div class="inst-banner" id="instBanner">📲 <span>Add SmartSewer to your Android home screen!</span><button class="btn-inst" id="instBtn">Install App</button></div>
+<div class="a-banner" id="aBanner"><span id="aIcon">⚠️</span><span id="aText">Warning</span></div>
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard"><main>
+  <h2 class="sec">📍 Live Sewage Level</h2>
+  <div class="lv-card">
+    <div class="lv-top">
+      <div><div class="lv-label">Fill Level</div><div><span class="lv-num" id="lvNum">42</span><span class="lv-unit">%</span></div></div>
+      <span class="lv-badge b-s" id="sBadge">NORMAL</span>
+    </div>
+    <div class="track"><div class="fill" id="fillBar" style="width:42%"></div></div>
+    <div class="marks"><span>0%</span><span>25%</span><span>50%</span><span>75%⚠</span><span>90%🚨</span><span>100%</span></div>
+  </div>
+
+  <h2 class="sec">📡 Sensor Readings</h2>
+  <div class="sgrid">
+    <div class="scard"><span class="s-icon">🌊</span><div class="s-name">Flow Rate</div><div class="s-val"><span id="flowVal">3.2</span><span class="s-unit">L/min</span></div><div class="tr tr-s" id="flowTr">→ Stable</div><svg class="spark" id="spkFlow" viewBox="0 0 100 30"></svg></div>
+    <div class="scard"><span class="s-icon">💧</span><div class="s-name">Pressure</div><div class="s-val"><span id="pressVal">1.4</span><span class="s-unit">bar</span></div><div class="tr tr-u" id="pressTr">↑ Rising</div><svg class="spark" id="spkPress" viewBox="0 0 100 30"></svg></div>
+    <div class="scard"><span class="s-icon">🌡️</span><div class="s-name">Temperature</div><div class="s-val"><span id="tempVal">24.6</span><span class="s-unit">°C</span></div><div class="tr tr-s" id="tempTr">→ Stable</div><svg class="spark" id="spkTemp" viewBox="0 0 100 30"></svg></div>
+    <div class="scard"><span class="s-icon">🔬</span><div class="s-name">Turbidity</div><div class="s-val"><span id="turbVal">18</span><span class="s-unit">NTU</span></div><div class="tr tr-d" id="turbTr">↓ Clear</div><svg class="spark" id="spkTurb" viewBox="0 0 100 30"></svg></div>
+  </div>
+
+  <h2 class="sec">🧠 Overflow Prediction</h2>
+  <div class="pred-card">
+    <div class="pred-ico pi-s" id="predIco">🛡️</div>
+    <div><div class="pred-title" id="predTitle">NO OVERFLOW RISK</div><div class="pred-sub" id="predSub">System operating within safe parameters.</div></div>
+    <div class="pred-time" id="predTime" style="display:none"><div class="pt-v" id="predHrs">--</div><div class="pt-u">HRS TO FULL</div></div>
+  </div>
+</main></div>
+
+<!-- ANALYTICS -->
+<div class="page" id="page-analytics"><main>
+  <h2 class="sec">📊 Level History</h2>
+  <div class="ch-card"><div class="ch-hd"><span class="ch-title">Sewage Level (%)</span><div class="ch-tabs"><button class="ctab active" onclick="setRange('1h',this)">1H</button><button class="ctab" onclick="setRange('6h',this)">6H</button><button class="ctab" onclick="setRange('24h',this)">24H</button></div></div><canvas id="cLevel" height="180"></canvas></div>
+  <div class="ch-card"><div class="ch-hd"><span class="ch-title">Flow Rate (L/min)</span></div><canvas id="cFlow" height="140"></canvas></div>
+  <div class="ch-card"><div class="ch-hd"><span class="ch-title">Temperature (°C)</span></div><canvas id="cTemp" height="140"></canvas></div>
+</main></div>
+
+<!-- ALERTS -->
+<div class="page" id="page-alerts"><main>
+  <h2 class="sec">🔔 Alert History</h2>
+  <div class="hlist" id="histList"></div>
+</main></div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings"><main>
+  <h2 class="sec">🔥 Firebase Connection</h2>
+  <div class="cfg-card">
+    <p>Enter your Firebase Realtime Database URL to connect live IoT sensor data. Found in Firebase Console → Realtime Database.</p>
+    <div class="ig"><label>Database URL</label><input type="url" id="fbUrl" placeholder="https://your-project-default-rtdb.firebaseio.com" /></div>
+    <div class="ig"><label>Data Path</label><input type="text" id="fbPath" placeholder="/sewage/sensor1" value="/sewage" /></div>
+    <button class="btn-go" onclick="connectFB()">⚡ CONNECT TO FIREBASE</button>
+    <div class="cs" id="connSt"></div>
+  </div>
+
+  <h2 class="sec">⚙️ Alert Thresholds</h2>
+  <div class="cfg-card">
+    <div class="ig"><label>⚠️ Warning Level (%)</label><input type="number" id="wTh" value="75" min="0" max="100" /></div>
+    <div class="ig"><label>🚨 Critical Level (%)</label><input type="number" id="cTh" value="90" min="0" max="100" /></div>
+    <button class="btn-go" style="background:linear-gradient(135deg,#1b5e20,#00e676);color:#060d1a" onclick="saveTh()">💾 SAVE THRESHOLDS</button>
+  </div>
+
+  <h2 class="sec">📋 Expected Firebase Data Format</h2>
+  <div class="cfg-card">
+    <p style="margin:0">Your Firebase node should contain:<br><br>
+    <code style="color:var(--accent);font-size:12px;line-height:2">
+      {<br>&nbsp;"level": 42,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// fill % (0-100)<br>&nbsp;"flow": 3.2,&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// L/min<br>&nbsp;"pressure": 1.4,&nbsp;&nbsp;// bar<br>&nbsp;"temperature": 24.6,<br>&nbsp;"turbidity": 18&nbsp;&nbsp;&nbsp;// NTU<br>}
+    </code></p>
+  </div>
+
+  <h2 class="sec">ℹ️ About</h2>
+  <div class="cfg-card">
+    <p style="margin:0;color:var(--muted)"><b style="color:var(--text)">SmartSewer Monitor v1.0</b><br>IoT-Enabled Smart Sewage System<br>Predictive Overflow Detection & Automated Alert Mechanism<br><br>
+    ✅ Refreshes every 5s when connected<br>✅ Push notifications<br>✅ Works offline (demo mode)</p>
+  </div>
+</main></div>
+
+<nav class="bnav">
+  <button class="nb active" id="nb0" onclick="nav('dashboard',0)"><span class="ni">🏠</span>Home</button>
+  <button class="nb" id="nb1" onclick="nav('analytics',1)"><span class="ni">📊</span>Analytics</button>
+  <button class="nb" id="nb2" onclick="nav('alerts',2)"><span class="ni">🔔</span>Alerts<span class="nbadge" id="nBadge">0</span></button>
+  <button class="nb" id="nb3" onclick="nav('settings',3)"><span class="ni">⚙️</span>Settings</button>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+let wTh=75,cTh=90,newA=0,fbLive=false,fbInt=null,dp=null;
+let lvD=gen(60,30,55,8),flD=gen(60,2,4.5,.5),tpD=gen(60,22,27,.4);
+const alerts=[
+  {type:'safe',msg:'System back to normal',level:62,t:'5 mins ago'},
+  {type:'warn',msg:'Warning: Level reached 75%',level:75,t:'22 mins ago'},
+  {type:'danger',msg:'CRITICAL: Level at 91% — Overflow risk!',level:91,t:'47 mins ago'},
+  {type:'safe',msg:'Pump maintenance completed',level:35,t:'2 hrs ago'},
+];
+let charts={},prevLv=42,dv=42,df=3.2,dpr=1.4,dt=24.6,dtb=18,tick=0;
+
+function gen(n,lo,hi,noise){const d=[];let v=(lo+hi)/2;for(let i=0;i<n;i++){v+=(Math.random()-.5)*noise*2;v=Math.max(lo,Math.min(hi,v));d.push(+v.toFixed(1));}return d;}
+function tlabels(n){return Array.from({length:n},(_,i)=>{const d=new Date(Date.now()-(n-1-i)*5000);return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');});}
+
+function nav(p,i){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nb').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');document.getElementById('nb'+i).classList.add('active');if(p==='analytics')renderCharts();if(p==='alerts')renderAlerts();}
+
+function updateLevel(v){
+  const pct=Math.round(v);
+  document.getElementById('lvNum').textContent=pct;
+  document.getElementById('fillBar').style.width=pct+'%';
+  const lv=document.getElementById('lvNum'),fb=document.getElementById('fillBar'),sb=document.getElementById('sBadge'),ab=document.getElementById('aBanner');
+  if(pct>=cTh){
+    lv.className='lv-num d';fb.className='fill fd';sb.className='lv-badge b-d';sb.textContent='CRITICAL';
+    ab.className='a-banner d';document.getElementById('aIcon').textContent='🚨';document.getElementById('aText').textContent=`CRITICAL: Level at ${pct}% — Overflow imminent!`;
+    setPred('d','🚨','OVERFLOW IMMINENT',`Overflow in ~${Math.max(1,Math.floor((100-pct)/2))} hrs at current rate.`,Math.max(1,Math.floor((100-pct)/2)));
+    if(pct>prevLv&&prevLv<cTh)pushAlert('danger',`🚨 CRITICAL: Level at ${pct}%!`,pct);
+  }else if(pct>=wTh){
+    lv.className='lv-num w';fb.className='fill fw';sb.className='lv-badge b-w';sb.textContent='WARNING';
+    ab.className='a-banner w';document.getElementById('aIcon').textContent='⚠️';document.getElementById('aText').textContent=`Warning: Level at ${pct}% — approaching threshold`;
+    setPred('w','⚠️','HIGH FILL LEVEL',`Approaching critical. ~${Math.floor((100-pct)/3)} hrs to overflow.`,Math.floor((100-pct)/3));
+    if(pct>prevLv&&prevLv<wTh)pushAlert('warn',`⚠️ Warning: Level at ${pct}%`,pct);
+  }else{
+    lv.className='lv-num';fb.className='fill';sb.className='lv-badge b-s';sb.textContent='NORMAL';ab.className='a-banner';
+    setPred('s','🛡️','NO OVERFLOW RISK','System operating within safe parameters. Continue monitoring.',null);
+  }
+  prevLv=pct;
+}
+
+function setPred(t,ico,title,sub,hrs){
+  const ic=document.getElementById('predIco');ic.className='pred-ico pi-'+t;ic.textContent=ico;
+  document.getElementById('predTitle').textContent=title;document.getElementById('predSub').textContent=sub;
+  const pt=document.getElementById('predTime');
+  if(hrs!==null){pt.style.display='';document.getElementById('predHrs').textContent=hrs;}else pt.style.display='none';
+}
+
+function pushAlert(type,msg,level){
+  alerts.unshift({type,msg,level,t:'Just now'});newA++;
+  const b=document.getElementById('nBadge');b.style.display='flex';b.textContent=newA>9?'9+':newA;
+  showToast(type,msg);
+  if('Notification'in window&&Notification.permission==='granted')new Notification('SmartSewer Alert',{body:msg,icon:'icon-192.png'});
+}
+
+function showToast(type,msg){
+  const ic={safe:'✅',warn:'⚠️',danger:'🚨'},ti={safe:'System Normal',warn:'Warning!',danger:'Critical Alert!'};
+  const t=document.createElement('div');t.className='toast';
+  t.innerHTML=`<div class="t-icon">${ic[type]}</div><div><div class="t-title">${ti[type]}</div><div class="t-msg">${msg}</div></div>`;
+  document.getElementById('toastWrap').prepend(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300);},4000);
+}
+
+function renderAlerts(){
+  document.getElementById('histList').innerHTML=alerts.map((a,i)=>`<div class="hitem" style="animation-delay:${i*.06}s"><div class="hdot ${a.type}"></div><div class="h-i"><div class="h-msg">${a.msg}</div><div class="h-t">${a.t}</div></div><div class="h-lv" style="color:${a.type==='safe'?'var(--safe)':a.type==='warn'?'var(--warn)':'var(--danger)'}">${a.level}%</div></div>`).join('');
+  document.getElementById('nBadge').style.display='none';newA=0;
+}
+
+function spark(id,data,color){
+  const svg=document.getElementById(id);if(!svg)return;
+  const[w,h,p]=[100,30,2];const mn=Math.min(...data),mx=Math.max(...data),rng=mx-mn||1;
+  const pts=data.map((v,i)=>`${p+(i/(data.length-1))*(w-p*2)},${h-p-((v-mn)/rng)*(h-p*2)}`).join(' ');
+  svg.innerHTML=`<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" opacity=".85"/><polyline points="${pts} ${w-p},${h} ${p},${h}" fill="${color}" fill-opacity=".1" stroke="none"/>`;
+}
+
+function chartCfg(data,color){
+  return{type:'line',data:{labels:tlabels(data.length),datasets:[{data,borderColor:color,borderWidth:2,pointRadius:0,fill:true,backgroundColor:color.replace('rgb','rgba').replace(')',',0.07)'),tension:.4}]},options:{responsive:true,animation:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#5a7a9a',font:{size:9},maxTicksLimit:6},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#5a7a9a',font:{size:9}},grid:{color:'rgba(255,255,255,.04)'}}}}};
+}
+function renderCharts(){
+  if(charts.lv)charts.lv.destroy();if(charts.fl)charts.fl.destroy();if(charts.tp)charts.tp.destroy();
+  charts.lv=new Chart(document.getElementById('cLevel').getContext('2d'),chartCfg(lvD,'rgb(0,229,255)'));
+  charts.fl=new Chart(document.getElementById('cFlow').getContext('2d'),chartCfg(flD,'rgb(0,230,118)'));
+  charts.tp=new Chart(document.getElementById('cTemp').getContext('2d'),chartCfg(tpD,'rgb(255,179,0)'));
+}
+function setRange(r,btn){
+  document.querySelectorAll('.ctab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');
+  const n=r==='1h'?12:r==='6h'?36:60;
+  if(charts.lv){charts.lv.data.datasets[0].data=lvD.slice(-n);charts.lv.data.labels=tlabels(n);charts.lv.update();}
+}
+
+function connectFB(){
+  const url=document.getElementById('fbUrl').value.trim(),path=document.getElementById('fbPath').value.trim()||'/sewage',st=document.getElementById('connSt');
+  if(!url){st.className='cs er';st.textContent='❌ Enter your Firebase Database URL';return;}
+  st.className='cs';st.textContent='⏳ Connecting...';
+  const ep=url.replace(/\/$/,'')+path+'.json';
+  function doF(){
+    fetch(ep).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(d=>{
+      fbLive=true;
+      document.getElementById('connLbl').textContent='LIVE';
+      const chip=document.getElementById('modeChip');chip.textContent='LIVE';chip.className='chip live';
+      st.className='cs ok';st.textContent='✅ Connected — updating every 5s';
+      const lv=d?.level??d?.sewage_level??d?.fill_level??d?.value;
+      const fl=d?.flow??d?.flow_rate??d?.flowRate;
+      const pr=d?.pressure;const tp=d?.temperature??d?.temp;const tb=d?.turbidity;
+      if(lv!=null){const v=parseFloat(lv);updateLevel(v);lvD.push(v);if(lvD.length>60)lvD.shift();}
+      if(fl!=null)document.getElementById('flowVal').textContent=parseFloat(fl).toFixed(1);
+      if(pr!=null)document.getElementById('pressVal').textContent=parseFloat(pr).toFixed(1);
+      if(tp!=null)document.getElementById('tempVal').textContent=parseFloat(tp).toFixed(1);
+      if(tb!=null)document.getElementById('turbVal').textContent=Math.round(tb);
+    }).catch(e=>{st.className='cs er';st.textContent='❌ '+e.message;});
+  }
+  if(fbInt)clearInterval(fbInt);doF();fbInt=setInterval(doF,5000);
+}
+
+function saveTh(){wTh=parseInt(document.getElementById('wTh').value)||75;cTh=parseInt(document.getElementById('cTh').value)||90;showToast('safe',`Thresholds saved — Warning ${wTh}%, Critical ${cTh}%`);}
+
+// PWA
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();dp=e;document.getElementById('instBanner').classList.add('show');});
+document.getElementById('instBtn').addEventListener('click',async()=>{if(!dp)return;dp.prompt();const{outcome}=await dp.userChoice;if(outcome==='accepted'){document.getElementById('instBanner').classList.remove('show');showToast('safe','SmartSewer added to home screen! 🎉');}dp=null;});
+window.addEventListener('appinstalled',()=>document.getElementById('instBanner').classList.remove('show'));
+
+// Demo simulation
+function demoStep(){
+  if(fbLive)return;tick++;const c=tick%200;
+  if(c<80)dv+=.45+Math.random()*.2;else if(c<120)dv-=.1;else dv-=.55+Math.random()*.15;
+  dv=Math.max(15,Math.min(97,dv));
+  df=Math.max(1,Math.min(6,df+(Math.random()-.5)*.3));
+  dpr=Math.max(.8,Math.min(2.5,dpr+(Math.random()-.5)*.1));
+  dt=Math.max(20,Math.min(32,dt+(Math.random()-.5)*.2));
+  dtb=Math.max(5,Math.min(60,dtb+(Math.random()-.5)*2));
+  const pv=lvD[lvD.length-1],tr=dv>pv+.5?{c:'tr-u',t:'↑ Rising'}:dv<pv-.5?{c:'tr-d',t:'↓ Falling'}:{c:'tr-s',t:'→ Stable'};
+  document.getElementById('flowTr').className='tr '+tr.c;document.getElementById('flowTr').textContent=tr.t;
+  updateLevel(dv);
+  lvD.push(+dv.toFixed(1));if(lvD.length>60)lvD.shift();
+  flD.push(+df.toFixed(1));if(flD.length>60)flD.shift();
+  tpD.push(+dt.toFixed(1));if(tpD.length>60)tpD.shift();
+  document.getElementById('flowVal').textContent=df.toFixed(1);
+  document.getElementById('pressVal').textContent=dpr.toFixed(1);
+  document.getElementById('tempVal').textContent=dt.toFixed(1);
+  document.getElementById('turbVal').textContent=Math.round(dtb);
+  spark('spkFlow',flD.slice(-15),'#00e676');
+  spark('spkPress',Array.from({length:15},()=>dpr+(Math.random()-.5)*.15),'#00e5ff');
+  spark('spkTemp',tpD.slice(-15),'#ffb300');
+  spark('spkTurb',Array.from({length:15},()=>dtb+(Math.random()-.5)*3),'#ff3d3d');
+}
+
+// Init
+renderAlerts();
+spark('spkFlow',flD.slice(-15),'#00e676');
+spark('spkPress',Array.from({length:15},()=>1.4+(Math.random()-.5)*.15),'#00e5ff');
+spark('spkTemp',tpD.slice(-15),'#ffb300');
+spark('spkTurb',Array.from({length:15},()=>18+(Math.random()-.5)*3),'#ff3d3d');
+if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();
+setInterval(demoStep,3000);
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
